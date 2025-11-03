@@ -29,22 +29,29 @@ jobs:
         VITE_AZURE_AI_ENDPOINT: ${{ secrets.VITE_AZURE_AI_ENDPOINT }}
         VITE_AZURE_AI_KEY: ${{ secrets.VITE_AZURE_AI_KEY }}
     
-    - name: Zip dist folder
+    - name: Prepare deployment package
       run: |
-        cd dist
-        zip -r ../dist.zip .
+        # Create a deployment directory
+        mkdir deploy
+        # Copy necessary files
+        cp -r dist deploy/
+        cp server.js deploy/
+        cp package*.json deploy/
+        # Create archive
+        cd deploy
+        zip -r ../app.zip .
         cd ..
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: dist-package
-        path: dist.zip
+        name: app-package
+        path: app.zip
     
     - name: Download artifact
       uses: actions/download-artifact@v4
       with:
-        name: dist-package
+        name: app-package
     
     - name: Deploy via Kudu REST API
       env:
@@ -57,7 +64,7 @@ jobs:
         # Deploy using Kudu API
         curl -X POST \
           -u "$USERNAME:$PASSWORD" \
-          --data-binary @dist.zip \
+          --data-binary @app.zip \
           https://gaslightersimulationapp.scm.azurewebsites.net/api/zipdeploy \
           -H "Content-Type: application/zip"
         
