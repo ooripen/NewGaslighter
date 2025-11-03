@@ -1,0 +1,5 @@
+AZURE_SETUP.md
+src/App.tsx
+src/components/ChatStage.tsx
+src/components/ScreeningStage.tsx
+src/lib/types.ts
