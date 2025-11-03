@@ -29,36 +29,36 @@ jobs:
         VITE_AZURE_AI_ENDPOINT: ${{ secrets.VITE_AZURE_AI_ENDPOINT }}
         VITE_AZURE_AI_KEY: ${{ secrets.VITE_AZURE_AI_KEY }}
     
-    - name: Add web.config for Azure
+    - name: Zip dist folder
       run: |
-        cat > dist/web.config << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <configuration>
-          <system.webServer>
-            <rewrite>
-              <rules>
-                <rule name="React Routes" stopProcessing="true">
-                  <match url=".*" />
-                  <conditions logicalGrouping="MatchAll">
-                    <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
-                    <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
-                  </conditions>
-                  <action type="Rewrite" url="/index.html" />
-                </rule>
-              </rules>
-            </rewrite>
-            <staticContent>
-              <mimeMap fileExtension=".json" mimeType="application/json" />
-              <mimeMap fileExtension=".woff" mimeType="application/font-woff" />
-              <mimeMap fileExtension=".woff2" mimeType="application/font-woff2" />
-            </staticContent>
-          </system.webServer>
-        </configuration>
-        EOF
-
-    - name: Deploy to Azure Web App
-      uses: azure/webapps-deploy@v3
+        cd dist
+        zip -r ../dist.zip .
+        cd ..
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
       with:
-        app-name: 'GaslighterSimulationApp'
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: ./dist
+        name: dist-package
+        path: dist.zip
+    
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-package
+    
+    - name: Deploy via Kudu REST API
+      env:
+        PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+      run: |
+        # Extract credentials from publish profile
+        USERNAME=$(echo "$PUBLISH_PROFILE" | grep -oP 'userName="\K[^"]+' | head -1)
+        PASSWORD=$(echo "$PUBLISH_PROFILE" | grep -oP 'userPWD="\K[^"]+' | head -1)
+        
+        # Deploy using Kudu API
+        curl -X POST \
+          -u "$USERNAME:$PASSWORD" \
+          --data-binary @dist.zip \
+          https://gaslightersimulationapp.scm.azurewebsites.net/api/zipdeploy \
+          -H "Content-Type: application/zip"
+        
+        echo "Deployment completed!"
