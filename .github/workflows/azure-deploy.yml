@@ -29,12 +29,16 @@ jobs:
         VITE_AZURE_AI_ENDPOINT: ${{ secrets.VITE_AZURE_AI_ENDPOINT }}
         VITE_AZURE_AI_KEY: ${{ secrets.VITE_AZURE_AI_KEY }}
     
+    - name: Install production dependencies
+      run: npm ci --omit=dev
+    
     - name: Prepare deployment package
       run: |
         # Create a deployment directory
         mkdir deploy
         # Copy necessary files
         cp -r dist deploy/
+        cp -r node_modules deploy/
         cp server.js deploy/
         cp package*.json deploy/
         # Create archive
